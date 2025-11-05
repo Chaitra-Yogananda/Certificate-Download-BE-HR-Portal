@@ -59,7 +59,7 @@ namespace HrCertificatePortal.Api.Services.Implementations
             // Start slightly smaller and fit to the yellow line width
             float targetFontSize = (float)System.Math.Max(12f, image.Height * 0.145f); // ~14.5% of height to start
             var font = family.CreateFont(targetFontSize, FontStyle.Regular);
-            float maxTextWidth = image.Width * 0.68f; 
+            float maxTextWidth = image.Width * 0.68f;
             try
             {
                 var measure = SixLabors.Fonts.TextMeasurer.MeasureSize(name, new SixLabors.Fonts.TextOptions(font));
@@ -117,7 +117,7 @@ namespace HrCertificatePortal.Api.Services.Implementations
                 image.Mutate(ctx => ctx.DrawText(options, name, nameColor));
             }
 
-            AfterTextDraw:
+        AfterTextDraw:
 
             using var ms = new MemoryStream();
             image.SaveAsJpeg(ms, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = 100 });

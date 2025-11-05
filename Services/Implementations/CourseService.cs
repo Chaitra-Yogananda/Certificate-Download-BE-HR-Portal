@@ -11,8 +11,8 @@ namespace HrCertificatePortal.Api.Services.Implementations
     {
         private const long MaxImageBytes = 5L * 1024 * 1024; // 5 MB
         private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg" };
-        private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase) { 
-            "image/jpeg" 
+        private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase) {
+            "image/jpeg"
         };
 
         private readonly ICourseRepository _courseRepo;
