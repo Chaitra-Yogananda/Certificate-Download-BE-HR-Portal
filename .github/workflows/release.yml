@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  CONFIGURATION: Release
+
+jobs:
+  build-and-release:
+    name: Build and Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+    
+    - name: Publish for Linux
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --runtime linux-x64 --self-contained false --output ./publish/linux-x64
+    
+    - name: Publish for Windows
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --runtime win-x64 --self-contained false --output ./publish/win-x64
+    
+    - name: Create release archives
+      run: |
+        cd ./publish/linux-x64
+        tar -czf ../../hr-certificate-portal-${{ steps.version.outputs.version }}-linux-x64.tar.gz *
+        cd ../win-x64
+        zip -r ../../hr-certificate-portal-${{ steps.version.outputs.version }}-win-x64.zip *
+        cd ../..
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "## What's Changed" > CHANGELOG.md
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREV_TAG" ]; then
+          echo "- Initial release" >> CHANGELOG.md
+        else
+          git log --oneline --pretty=format:"- %s" ${PREV_TAG}..HEAD >> CHANGELOG.md
+        fi
+        cat CHANGELOG.md
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: CHANGELOG.md
+        draft: false
+        prerelease: false
+        files: |
+          hr-certificate-portal-${{ steps.version.outputs.version }}-linux-x64.tar.gz
+          hr-certificate-portal-${{ steps.version.outputs.version }}-win-x64.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Release summary
+      run: |
+        echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Version: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- .NET Version: ${{ env.DOTNET_VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Configuration: ${{ env.CONFIGURATION }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Artifacts Created" >> $GITHUB_STEP_SUMMARY
+        echo "- Linux x64 build" >> $GITHUB_STEP_SUMMARY
+        echo "- Windows x64 build" >> $GITHUB_STEP_SUMMARY
