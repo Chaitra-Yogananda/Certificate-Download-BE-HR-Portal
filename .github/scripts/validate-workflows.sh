@@ -39,7 +39,17 @@ validate_yaml() {
     fi
     
     # Validate YAML syntax using Python
-    if python3 -c "import yaml, sys; yaml.safe_load(open('$file'))" 2>/dev/null; then
+    if python3 -c "
+import yaml
+import sys
+try:
+    with open('$file', 'r', encoding='utf-8') as f:
+        yaml.safe_load(f)
+    sys.exit(0)
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null; then
         echo -e "${GREEN}✓ Valid${NC}"
         passed=$((passed + 1))
         return 0
